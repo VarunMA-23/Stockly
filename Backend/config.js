@@ -14,3 +14,10 @@ export const db = {
 }
 
 export const corsUrl = process.env.CORS_URL
+
+export const jwt = {
+  secret: process.env.JWT_SECRET || "fallback_dev_secret",
+  accessExpiry: "15m",
+  refreshExpiry: "7d",
+  cookieExpiry: 7 * 24 * 60 * 60 * 1000,
+}
