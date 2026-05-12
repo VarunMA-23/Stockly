@@ -16,6 +16,22 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+    role: {
+      type: String,
+      enum: ["admin", "manager", "cashier", "warehouse", "analyst"],
+      default: "cashier",
+    },
+    store: {
+      type: Schema.Types.ObjectId,
+      ref: "Store",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    refreshToken: {
+      type: String,
+    },
   },
   {
     timestamps: true,

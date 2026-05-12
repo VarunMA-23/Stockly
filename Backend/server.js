@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser"
 import userRoutes from "./routes/userRoutes.js"
 import { corsUrl, port } from "./config.js"
 import todoRoutes from "./routes/todoRoutes.js"
+import storeRoutes from "./routes/storeRoutes.js"
+import categoryRoutes from "./routes/categoryRoutes.js"
 import { errorHandler } from "./middleware/errorMiddleware.js"
 
 const PORT = port ?? 8080
@@ -20,6 +22,8 @@ app.use(express.urlencoded({ extended: true }))
 
 app.use("/api/users", userRoutes)
 app.use("/api/todo", todoRoutes)
+app.use("/api/stores", storeRoutes)
+app.use("/api/categories", categoryRoutes)
 
 app.use(errorHandler)
 
