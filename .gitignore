@@ -3,3 +3,17 @@ Specs
 backend.err
 backend.log
 .opencode
+node_modules/
+dist/
+*.log
+.env
+.DS_Store
+Frontend/dist/
+Frontend/node_modules/
+Frontend/*.log
+Frontend/*.err
+Backend/*.log
+Backend/*.err
+Backend/venv/
+Backend/__pycache__/
+
