@@ -13,13 +13,16 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  FolderTree
 } from 'lucide-react';
 import { cn } from '../components/ui/utils';
+import { useAuth } from '../context/AuthContext';
 
 const navigation = [
   { name: 'Dashboard', icon: LayoutDashboard, href: '/' },
   { name: 'Inventory', icon: Package, href: '/inventory' },
+  { name: 'Categories', icon: FolderTree, href: '/categories' },
   { name: 'Products', icon: ShoppingCart, href: '/products' },
   { name: 'Sales', icon: TrendingUp, href: '/sales' },
   { name: 'POS / Billing', icon: CreditCard, href: '/pos' },
@@ -39,7 +42,18 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
+  const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+
+  const initials = user?.name
+    ?.split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase() || '?';
+
+  const roleLabel = user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+    : '';
 
   return (
     <div
@@ -74,7 +88,10 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         <div className="space-y-1">
           {navigation.map((item) => {
-            const isActive = currentPath === item.href;
+            const isActive =
+              item.href === '/'
+                ? currentPath === item.href
+                : currentPath === item.href || currentPath.startsWith(`${item.href}/`);
             return (
               <button
                 key={item.href}
@@ -101,11 +118,11 @@ export function Sidebar({ currentPath, onNavigate }: SidebarProps) {
         <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3 px-3 py-2 bg-accent/50 rounded-lg">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-gradient-from to-emerald-gradient-to flex items-center justify-center text-white text-sm font-medium">
-              JD
+              {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">John Doe</p>
-              <p className="text-xs text-muted-foreground truncate">Admin</p>
+              <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
+              <p className="text-xs text-muted-foreground truncate">{roleLabel}</p>
             </div>
           </div>
         </div>

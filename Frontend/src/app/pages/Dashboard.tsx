@@ -25,6 +25,9 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { useEffect, useMemo, useState } from 'react';
+import { getProducts } from '../services/products';
+import { Skeleton } from '../components/ui/skeleton';
 
 const kpiData = [
   {
@@ -152,6 +155,66 @@ const aiInsights = [
 ];
 
 export function Dashboard() {
+  const [productCount, setProductCount] = useState<number | null>(null);
+  const [lowStockCount, setLowStockCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadKpis = async () => {
+      try {
+        const [productsResponse, lowStockResponse] = await Promise.all([
+          getProducts({ page: 1, limit: 1, isActive: true }),
+          getProducts({ page: 1, limit: 1, minStock: true, isActive: true }),
+        ]);
+
+        if (!active) {
+          return;
+        }
+
+        setProductCount(productsResponse.total);
+        setLowStockCount(lowStockResponse.total);
+      } catch {
+        if (!active) {
+          return;
+        }
+
+        setProductCount(null);
+        setLowStockCount(null);
+      }
+    };
+
+    loadKpis();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const resolvedKpiData = useMemo(
+    () =>
+      kpiData.map((kpi) => {
+        if (kpi.title === 'Inventory Value') {
+          return {
+            ...kpi,
+            value: productCount === null ? '—' : String(productCount),
+            title: 'Total Products',
+          };
+        }
+
+        if (kpi.title === 'Low Stock Alerts') {
+          return {
+            ...kpi,
+            value: lowStockCount === null ? '—' : String(lowStockCount),
+            change: lowStockCount === null ? 'Live' : `${lowStockCount}`,
+          };
+        }
+
+        return kpi;
+      }),
+    [lowStockCount, productCount]
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -162,7 +225,7 @@ export function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {kpiData.map((kpi, index) => (
+        {resolvedKpiData.map((kpi, index) => (
           <div
             key={index}
             className="p-4 bg-card border border-border rounded-xl hover:shadow-lg transition-shadow"
@@ -182,7 +245,14 @@ export function Dashboard() {
                 {kpi.change}
               </div>
             </div>
-            <h3 className="text-2xl font-bold mb-1">{kpi.value}</h3>
+            <h3 className="text-2xl font-bold mb-1">
+              {(kpi.title === 'Total Products' && productCount === null) ||
+              (kpi.title === 'Low Stock Alerts' && lowStockCount === null) ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                kpi.value
+              )}
+            </h3>
             <p className="text-sm text-muted-foreground">{kpi.title}</p>
           </div>
         ))}

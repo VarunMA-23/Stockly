@@ -16,7 +16,7 @@
 | Auth | JWT + bcryptjs | Already implemented |
 | Cache | Redis | Industry standard |
 | Search | Elasticsearch | Chosen for full-text search |
-| ML | Python (scikit-learn/XGBoost) — served via separate microservice | User builds model, backend consumes predictions |
+| ML Data Prep | CSV-based data warehouse exports | Historical data can be exported to CSV now and used later for offline ML model building |
 | Frontend Hosting | Netlify | Chosen by user |
 | Backend Hosting | Railway / Render (TBD on deploy) | Only if deployment needed |
 
@@ -69,7 +69,7 @@ Frontend → REST API → Express Routes → Controllers →
   Services → Mongoose Models → MongoDB
     ├── Redis (cache hot data)
     ├── Elasticsearch (search indexing)
-    └── ETL Pipeline → Data Warehouse → ML Predictions
+    └── ETL Pipeline → CSV Warehouse Exports
 ```
 
 ---
@@ -142,8 +142,10 @@ Backend/
 │   ├── pipeline.js            # ETL orchestration
 │   ├── transforms.js          # Data transformation
 │   └── scheduler.js           # Cron/interval scheduling
-└── ml-gateway/
-    └── predictionClient.js    # HTTP client to ML service
+├── exports/
+│   └── warehouse/             # Generated CSV files for analytics / future ML
+└── scripts/
+    └── exportWarehouse.js     # Manual or scheduled CSV export entry point
 ```
 
 ### Frontend (`Frontend/src/`)
@@ -374,34 +376,51 @@ POItem {
 }
 ```
 
-### 4.7 Analytics (Data Warehouse Collections)
+### 4.7 Analytics / Warehouse Export Schema
 
 ```
-SalesFact {
-  _id: ObjectId
-  date: Date (indexed)
-  productId: ref->Product
-  categoryId: ref->Category
-  storeId: ref->Store
-  customerId: ref->Customer?
-  quantity: Number
-  unitPrice: Number
-  totalAmount: Number
-  costPrice: Number (for margin calc)
-  profit: Number
-  paymentMethod: String
-}
+sales_fact.csv
+  date
+  saleId
+  invoiceNo
+  productId
+  productName
+  categoryId
+  categoryName
+  storeId
+  storeName
+  customerId
+  customerName
+  quantity
+  unitPrice
+  totalAmount
+  costPrice
+  profit
+  paymentMethod
+  cashierId
 
-InventoryFact {
-  _id: ObjectId
-  date: Date
-  productId: ref->Product
-  openingStock: Number
-  closingStock: Number
-  quantitySold: Number
-  quantityPurchased: Number
-  stockValue: Number
-}
+inventory_fact.csv
+  date
+  productId
+  productName
+  categoryId
+  categoryName
+  openingStock
+  closingStock
+  quantitySold
+  quantityPurchased
+  stockValue
+
+customer_snapshot.csv
+  exportDate
+  customerId
+  name
+  mobile
+  email
+  loyaltyPoints
+  totalPurchases
+  lastPurchaseDate
+  tags
 ```
 
 ---
@@ -488,15 +507,6 @@ InventoryFact {
 | GET | `/analytics/peak-hours` | Analyst | Peak shopping hours |
 | GET | `/analytics/supplier-performance` | Analyst | Supplier comparison |
 
-### ML Gateway (`/api/predictions`)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/predictions/sales` | Analyst | ML sales forecast |
-| GET | `/predictions/demand/:productId` | Analyst | Product demand forecast |
-| GET | `/predictions/stock-depletion/:productId` | Analyst | Stock depletion prediction |
-| GET | `/predictions/insights` | Analyst | Smart insights ("Milk sales peak Fri") |
-
 ### Search (`/api/search`)
 
 | Method | Endpoint | Auth | Description |
@@ -541,32 +551,29 @@ Index: customers
 ```
 Trigger: cron job (every 15min) or event-driven
 ├── Extract:
-│   ├── Sales collection → sales_fact
-│   ├── InventoryLog collection → inventory_fact
-│   └── Customer collection → customer snapshot
+│   ├── Sales collection → sales_fact rows
+│   ├── InventoryLog / Product collections → inventory_fact rows
+│   └── Customer collection → customer snapshot rows
 ├── Transform:
 │   ├── Flatten nested objects
 │   ├── Calculate derived fields (profit = total - cost)
 │   ├── Enrich with dimension lookups
 │   └── Aggregate by hour/day
 └── Load:
-    ├── Write to analytics collections
-    └── Trigger ML predictions refresh
+    ├── Write `sales_fact.csv`
+    ├── Write `inventory_fact.csv`
+    └── Write `customer_snapshot.csv`
 ```
 
-### ML Service Integration
+### CSV Warehouse Strategy
 
 ```
-ML Service (Python - built by user separately):
-├── Reads from Data Warehouse collections
-├── Trains models on historical data
-├── Exposes REST API endpoints
-└── Returns predictions → stored in predictions collection
-
-Backend → ML Service communication:
-└── Express calls Python microservice via HTTP
-    └── ml-gateway/predictionClient.js handles requests
-    └── Falls back to cached predictions if ML service is down
+CSV exports are the long-term historical warehouse for future ML work:
+├── Backend generates flat CSV files from operational MongoDB data
+├── Files are stored in a predictable export directory
+├── Exports can be generated on schedule or manually
+├── These CSV files can later be imported into Python notebooks / scripts
+└── No prediction service is required in the current project scope
 ```
 
 ---
@@ -605,14 +612,14 @@ Backend → ML Service communication:
 ### Phase 5: Infrastructure (Weeks 9-10)
 - [ ] Redis caching layer
 - [ ] Elasticsearch indexing + full-text search
-- [ ] ETL pipeline to warehouse collections
+- [ ] ETL pipeline to CSV warehouse exports
 - [ ] Frontend search integration
 
-### Phase 6: ML Gateway (Weeks 11-12)
-- [ ] Build prediction API endpoints
-- [ ] Connect to user's Python ML service
-- [ ] AI Forecasting page (frontend)
-- [ ] Smart insights display
+### Phase 6: Data Export Readiness (Weeks 11-12)
+- [ ] Finalize CSV warehouse schemas for sales, inventory, and customers
+- [ ] Add scheduled/manual export commands
+- [ ] Document CSV usage for future offline ML experiments
+- [ ] Keep AI Forecasting page as placeholder until a real model exists
 
 ---
 
@@ -627,7 +634,7 @@ Backend → ML Service communication:
 | Multi-store | Store ref on User + Product | Scalable from day one |
 | Invoice numbering | Auto-increment per store (YYMMDD-XXXX) | Human-readable |
 | Auth tokens | Access (15min) + Refresh (7d) | Security best practice |
-| ML integration | Separate Python microservice (HTTP) | User builds independently |
+| ML readiness | CSV warehouse exports | Keeps the app simple now and preserves training data for future offline model work |
 
 ---
 
@@ -635,5 +642,5 @@ Backend → ML Service communication:
 
 - [ ] **Deployment**: Backend hosting only if needed. No decision yet.
 - [ ] **Thermal printing**: Requires Electron or browser print API. Research needed in POS phase.
-- [ ] **ML model details**: User will provide model specification later.
+- [ ] **Future ML workflow**: Decide later how CSV exports will be consumed for experiments or training.
 - [ ] **File storage**: Product images — local upload vs cloud (Cloudinary/S3). TBD.

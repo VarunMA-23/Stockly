@@ -1,4 +1,5 @@
 import User from "../models/userModel.js"
+import Store from "../models/storeModel.js"
 import asyncHandler from "express-async-handler"
 import {
   generateAccessToken,
@@ -20,7 +21,16 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("User already Exists")
   }
 
-  const user = await User.create({ name, email, password, store })
+  let storeId
+
+  if (typeof store === "string" && store.trim()) {
+    const createdStore = await Store.create({ name: store.trim() })
+    storeId = createdStore._id
+  } else if (store) {
+    storeId = store
+  }
+
+  const user = await User.create({ name, email, password, store: storeId })
 
   if (user) {
     const accessToken = generateAccessToken(user._id)

@@ -1,10 +1,40 @@
+import { useState } from 'react';
 import { Sparkles, Mail, Lock, User, Building2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 interface SignupProps {
   onNavigate: (path: string) => void;
 }
 
 export function Signup({ onNavigate }: SignupProps) {
+  const { register, error, clearError } = useAuth();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [storeName, setStoreName] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+    setIsSubmitting(true);
+    try {
+      const fullName = `${firstName} ${lastName}`.trim();
+      await register(fullName, email, password, storeName || undefined);
+      onNavigate('/');
+    } catch {
+      // error display is handled via context
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignUp = () => {
+    toast('Coming soon');
+  };
+
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Signup Form */}
@@ -22,23 +52,42 @@ export function Signup({ onNavigate }: SignupProps) {
             <p className="text-muted-foreground">Get started with ShelfIQ today</p>
           </div>
 
-          <form className="space-y-4">
+          {error?.message && !error?.fields && (
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+              {error.message}
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">First Name</label>
-                <input
-                  type="text"
-                  placeholder="John"
-                  className="w-full px-4 py-2.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  />
+                </div>
+                {error?.fields?.firstName && (
+                  <p className="text-sm text-destructive mt-1">{error.fields.firstName}</p>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Last Name</label>
                 <input
                   type="text"
                   placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
                   className="w-full px-4 py-2.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
+                {error?.fields?.lastName && (
+                  <p className="text-sm text-destructive mt-1">{error.fields.lastName}</p>
+                )}
               </div>
             </div>
 
@@ -49,9 +98,14 @@ export function Signup({ onNavigate }: SignupProps) {
                 <input
                   type="email"
                   placeholder="john@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
+              {error?.fields?.email && (
+                <p className="text-sm text-destructive mt-1">{error.fields.email}</p>
+              )}
             </div>
 
             <div>
@@ -61,9 +115,14 @@ export function Signup({ onNavigate }: SignupProps) {
                 <input
                   type="text"
                   placeholder="My Supermarket"
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
+              {error?.fields?.store && (
+                <p className="text-sm text-destructive mt-1">{error.fields.store}</p>
+              )}
             </div>
 
             <div>
@@ -73,34 +132,31 @@ export function Signup({ onNavigate }: SignupProps) {
                 <input
                   type="password"
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
+              {error?.fields?.password && (
+                <p className="text-sm text-destructive mt-1">{error.fields.password}</p>
+              )}
             </div>
 
             <label className="flex items-start gap-2 cursor-pointer">
               <input type="checkbox" className="mt-1 rounded border-input" />
               <span className="text-sm text-muted-foreground">
                 I agree to the{' '}
-                <a href="#" className="text-primary hover:underline">
-                  Terms of Service
-                </a>{' '}
-                and{' '}
-                <a href="#" className="text-primary hover:underline">
-                  Privacy Policy
-                </a>
+                <a href="#" className="text-primary hover:underline">Terms of Service</a>{' '}and{' '}
+                <a href="#" className="text-primary hover:underline">Privacy Policy</a>
               </span>
             </label>
 
             <button
               type="submit"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigate('/');
-              }}
-              className="w-full py-2.5 bg-gradient-to-r from-emerald-gradient-from to-emerald-gradient-to text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
+              disabled={isSubmitting}
+              className="w-full py-2.5 bg-gradient-to-r from-emerald-gradient-from to-emerald-gradient-to text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              Create Account
+              {isSubmitting ? 'Creating account...' : 'Create Account'}
             </button>
 
             <div className="relative my-6">
@@ -114,25 +170,14 @@ export function Signup({ onNavigate }: SignupProps) {
 
             <button
               type="button"
+              onClick={handleGoogleSignUp}
               className="w-full py-2.5 bg-background border border-input rounded-lg font-medium hover:bg-accent transition-colors flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
+                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
               Sign up with Google
             </button>
@@ -140,12 +185,7 @@ export function Signup({ onNavigate }: SignupProps) {
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <button
-              onClick={() => onNavigate('/login')}
-              className="text-primary font-medium hover:underline"
-            >
-              Sign in
-            </button>
+            <button onClick={() => onNavigate('/login')} className="text-primary font-medium hover:underline">Sign in</button>
           </p>
         </div>
       </div>
@@ -155,9 +195,7 @@ export function Signup({ onNavigate }: SignupProps) {
         <div className="absolute inset-0 bg-grid-white/10"></div>
         <div className="relative z-10 text-white max-w-lg">
           <h2 className="text-4xl font-bold mb-4">Join 5,000+ Retailers</h2>
-          <p className="text-lg text-white/90 mb-8">
-            Start managing your inventory smarter with AI-powered insights and automation.
-          </p>
+          <p className="text-lg text-white/90 mb-8">Start managing your inventory smarter with AI-powered insights and automation.</p>
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-white/10 backdrop-blur-sm">
               <div className="text-3xl font-bold mb-1">95%</div>

@@ -19,7 +19,10 @@ export function MobileNav({ currentPath, onNavigate }: MobileNavProps) {
     <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
       <div className="flex items-center justify-around px-2 py-2">
         {mobileNavItems.map((item) => {
-          const isActive = currentPath === item.href;
+          const isActive =
+            item.href === '/'
+              ? currentPath === item.href
+              : currentPath === item.href || currentPath.startsWith(`${item.href}/`);
           return (
             <button
               key={item.href}

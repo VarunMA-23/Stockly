@@ -7,13 +7,27 @@ import { corsUrl, port } from "./config.js"
 import todoRoutes from "./routes/todoRoutes.js"
 import storeRoutes from "./routes/storeRoutes.js"
 import categoryRoutes from "./routes/categoryRoutes.js"
+import productRoutes from "./routes/productRoutes.js"
+import customerRoutes from "./routes/customerRoutes.js"
+import saleRoutes from "./routes/saleRoutes.js"
 import { errorHandler } from "./middleware/errorMiddleware.js"
 
 const PORT = port ?? 8080
 
 export const app = express()
 
-app.use(cors({ origin: corsUrl, optionsSuccessStatus: 200 }))
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin}`)
+  next()
+})
+
+app.use(cors({
+  origin: (origin, callback) => {
+    callback(null, true)
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+}))
 
 app.use(cookieParser())
 
@@ -24,6 +38,9 @@ app.use("/api/users", userRoutes)
 app.use("/api/todo", todoRoutes)
 app.use("/api/stores", storeRoutes)
 app.use("/api/categories", categoryRoutes)
+app.use("/api/products", productRoutes)
+app.use("/api/customers", customerRoutes)
+app.use("/api/sales", saleRoutes)
 
 app.use(errorHandler)
 
