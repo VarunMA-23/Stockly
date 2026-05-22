@@ -1,18 +1,16 @@
 import {
   TrendingUp,
   TrendingDown,
-  DollarSign,
+  IndianRupee,
   Package,
   ShoppingCart,
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
+  List,
+  FileDown,
 } from 'lucide-react';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
   AreaChart,
   Area,
   PieChart,
@@ -23,197 +21,200 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
-import { useEffect, useMemo, useState } from 'react';
-import { getProducts } from '../services/products';
+import { useEffect, useState } from 'react';
+import {
+  getDashboardMetrics,
+  getRevenueReport,
+  getCategorySales,
+  getBestSellingProducts,
+  DashboardMetrics,
+  RevenueDataPoint,
+  CategoryDataPoint,
+  TopProductDataPoint,
+} from '../services/analytics';
 import { Skeleton } from '../components/ui/skeleton';
+import { Button } from '../components/ui/button';
+import { formatCurrency } from '../utils/formatters';
+import { downloadDatasetCsv } from '../services/analytics';
 
-const kpiData = [
-  {
-    title: 'Daily Revenue',
-    value: '$45,231',
-    change: '+12.5%',
-    trend: 'up',
-    icon: DollarSign,
-    color: 'emerald',
-  },
-  {
-    title: 'Net Profit',
-    value: '$12,405',
-    change: '+8.2%',
-    trend: 'up',
-    icon: TrendingUp,
-    color: 'blue',
-  },
-  {
-    title: 'Inventory Value',
-    value: '$328,905',
-    change: '-2.4%',
-    trend: 'down',
-    icon: Package,
-    color: 'purple',
-  },
-  {
-    title: 'Orders Today',
-    value: '1,429',
-    change: '+18.7%',
-    trend: 'up',
-    icon: ShoppingCart,
-    color: 'orange',
-  },
-  {
-    title: 'Sales Growth',
-    value: '23.8%',
-    change: '+4.1%',
-    trend: 'up',
-    icon: TrendingUp,
-    color: 'pink',
-  },
-  {
-    title: 'Low Stock Alerts',
-    value: '24',
-    change: '+6',
-    trend: 'up',
-    icon: AlertTriangle,
-    color: 'red',
-  },
-];
-
-const revenueData = [
-  { name: 'Mon', revenue: 4200, profit: 1200 },
-  { name: 'Tue', revenue: 5100, profit: 1500 },
-  { name: 'Wed', revenue: 4800, profit: 1300 },
-  { name: 'Thu', revenue: 6200, profit: 1800 },
-  { name: 'Fri', revenue: 7500, profit: 2200 },
-  { name: 'Sat', revenue: 8900, profit: 2600 },
-  { name: 'Sun', revenue: 8100, profit: 2400 },
-];
-
-const categoryData = [
-  { name: 'Groceries', value: 35, color: '#10b981' },
-  { name: 'Dairy', value: 20, color: '#3b82f6' },
-  { name: 'Beverages', value: 18, color: '#8b5cf6' },
-  { name: 'Snacks', value: 15, color: '#f59e0b' },
-  { name: 'Others', value: 12, color: '#ec4899' },
-];
-
-const topProducts = [
-  { name: 'Organic Milk 1L', sales: 342, revenue: '$1,710', trend: 'up', change: '+12%' },
-  { name: 'Whole Wheat Bread', sales: 289, revenue: '$867', trend: 'up', change: '+8%' },
-  { name: 'Fresh Eggs 12pk', sales: 256, revenue: '$1,024', trend: 'down', change: '-3%' },
-  { name: 'Orange Juice 2L', sales: 234, revenue: '$1,638', trend: 'up', change: '+15%' },
-  { name: 'Greek Yogurt', sales: 198, revenue: '$990', trend: 'up', change: '+5%' },
-];
-
-const alerts = [
-  {
-    product: 'Organic Bananas',
-    status: 'Low Stock',
-    quantity: 24,
-    type: 'warning',
-  },
-  {
-    product: 'Almond Milk',
-    status: 'Out of Stock',
-    quantity: 0,
-    type: 'danger',
-  },
-  {
-    product: 'Brown Rice',
-    status: 'Reorder Soon',
-    quantity: 45,
-    type: 'info',
-  },
-  {
-    product: 'Tomato Sauce',
-    status: 'Low Stock',
-    quantity: 18,
-    type: 'warning',
-  },
-];
-
+// Fallback AI Insights matching historical SRE patterns
 const aiInsights = [
   {
     icon: '🥛',
-    title: 'Milk sales may rise 18% next week',
-    description: 'Based on seasonal patterns and weather forecast',
+    title: 'Perishable products sales rising',
+    description: 'Fresh dairy and groceries demand is up 15% this week.',
     confidence: '95%',
   },
   {
     icon: '🍚',
-    title: 'Rice stock will run out in 4 days',
-    description: 'Current consumption rate: 125 units/day',
+    title: 'Reorder suggestion for low stock items',
+    description: 'Average SRE refill recommendation lists 8 items needing PO drafts.',
     confidence: '92%',
   },
   {
     icon: '🍫',
-    title: 'Snacks perform best after 6 PM',
-    description: 'Consider promotional displays during peak hours',
+    title: 'Peak transaction hours detected',
+    description: 'POS sales volume spikes between 4 PM and 8 PM daily.',
     confidence: '88%',
   },
 ];
 
 export function Dashboard() {
-  const [productCount, setProductCount] = useState<number | null>(null);
-  const [lowStockCount, setLowStockCount] = useState<number | null>(null);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [revenueData, setRevenueData] = useState<RevenueDataPoint[]>([]);
+  const [categoryData, setCategoryData] = useState<CategoryDataPoint[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProductDataPoint[]>([]);
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [metricsRes, revenueRes, categoryRes, topProductsRes] = await Promise.all([
+        getDashboardMetrics(),
+        getRevenueReport(),
+        getCategorySales(),
+        getBestSellingProducts(),
+      ]);
+
+      setMetrics(metricsRes);
+      setRevenueData(revenueRes);
+      setCategoryData(categoryRes);
+      setTopProducts(topProductsRes);
+    } catch (err) {
+      console.error('Failed to load dashboard analytics:', err);
+      setError('Unable to load dashboard analytics data. Please make sure the server is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let active = true;
-
-    const loadKpis = async () => {
-      try {
-        const [productsResponse, lowStockResponse] = await Promise.all([
-          getProducts({ page: 1, limit: 1, isActive: true }),
-          getProducts({ page: 1, limit: 1, minStock: true, isActive: true }),
-        ]);
-
-        if (!active) {
-          return;
-        }
-
-        setProductCount(productsResponse.total);
-        setLowStockCount(lowStockResponse.total);
-      } catch {
-        if (!active) {
-          return;
-        }
-
-        setProductCount(null);
-        setLowStockCount(null);
-      }
-    };
-
-    loadKpis();
-
-    return () => {
-      active = false;
-    };
+    loadData();
   }, []);
 
-  const resolvedKpiData = useMemo(
-    () =>
-      kpiData.map((kpi) => {
-        if (kpi.title === 'Inventory Value') {
-          return {
-            ...kpi,
-            value: productCount === null ? '—' : String(productCount),
-            title: 'Total Products',
-          };
-        }
+  const [downloadingDataset, setDownloadingDataset] = useState(false);
 
-        if (kpi.title === 'Low Stock Alerts') {
-          return {
-            ...kpi,
-            value: lowStockCount === null ? '—' : String(lowStockCount),
-            change: lowStockCount === null ? 'Live' : `${lowStockCount}`,
-          };
-        }
+  const handleDownloadDataset = async () => {
+    setDownloadingDataset(true);
+    try {
+      const blob = await downloadDatasetCsv();
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `ml-dataset-${new Date().toISOString().split("T")[0]}.csv`;
+      anchor.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download dataset:", err);
+    } finally {
+      setDownloadingDataset(false);
+    }
+  };
 
-        return kpi;
-      }),
-    [lowStockCount, productCount]
-  );
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-9 w-48" />
+          <Skeleton className="h-5 w-80 mt-1" />
+        </div>
+
+        {/* KPI Cards Skeletons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="p-4 bg-card border border-border rounded-xl space-y-3">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Skeletons */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 p-6 bg-card border border-border rounded-xl">
+            <Skeleton className="h-6 w-40 mb-6" />
+            <Skeleton className="h-[300px] w-full" />
+          </div>
+          <div className="p-6 bg-card border border-border rounded-xl">
+            <Skeleton className="h-6 w-40 mb-6" />
+            <Skeleton className="h-[300px] w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Real-time store metrics and operations tracker.</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-12 text-center">
+          <p className="mb-4 text-sm text-destructive">{error}</p>
+          <Button onClick={loadData}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Build KPI card display definitions from live metrics
+  const kpis = [
+    {
+      title: 'Daily Revenue',
+      value: formatCurrency(metrics?.dailyRevenue || 0),
+      change: metrics?.salesGrowth !== undefined ? `${metrics.salesGrowth >= 0 ? '+' : ''}${metrics.salesGrowth}%` : '0%',
+      trend: (metrics?.salesGrowth || 0) >= 0 ? 'up' : 'down',
+      icon: IndianRupee,
+      color: 'emerald',
+    },
+    {
+      title: 'Net Profit',
+      value: formatCurrency(metrics?.dailyProfit || 0),
+      change: 'Live',
+      trend: 'up',
+      icon: TrendingUp,
+      color: 'blue',
+    },
+    {
+      title: 'Inventory Value',
+      value: formatCurrency(metrics?.inventoryValue || 0),
+      change: 'Valuation',
+      trend: 'up',
+      icon: Package,
+      color: 'purple',
+    },
+    {
+      title: 'Orders Today',
+      value: String(metrics?.ordersToday || 0),
+      change: 'Transactions',
+      trend: 'up',
+      icon: ShoppingCart,
+      color: 'orange',
+    },
+    {
+      title: 'Total Products',
+      value: String(metrics?.totalProducts || 0),
+      change: 'Active SKUs',
+      trend: 'up',
+      icon: List,
+      color: 'pink',
+    },
+    {
+      title: 'Low Stock Alerts',
+      value: String(metrics?.lowStockAlerts || 0),
+      change: 'Needs refill',
+      trend: (metrics?.lowStockAlerts || 0) > 0 ? 'down' : 'up',
+      icon: AlertTriangle,
+      color: (metrics?.lowStockAlerts || 0) > 0 ? 'red' : 'emerald',
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -225,7 +226,7 @@ export function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {resolvedKpiData.map((kpi, index) => (
+        {kpis.map((kpi, index) => (
           <div
             key={index}
             className="p-4 bg-card border border-border rounded-xl hover:shadow-lg transition-shadow"
@@ -246,12 +247,7 @@ export function Dashboard() {
               </div>
             </div>
             <h3 className="text-2xl font-bold mb-1">
-              {(kpi.title === 'Total Products' && productCount === null) ||
-              (kpi.title === 'Low Stock Alerts' && lowStockCount === null) ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                kpi.value
-              )}
+              {kpi.value}
             </h3>
             <p className="text-sm text-muted-foreground">{kpi.title}</p>
           </div>
@@ -263,14 +259,9 @@ export function Dashboard() {
         <div className="lg:col-span-2 p-6 bg-card border border-border rounded-xl">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-semibold">Revenue Overview</h2>
+              <h2 className="text-lg font-semibold">Revenue & Profit Overview</h2>
               <p className="text-sm text-muted-foreground">Last 7 days performance</p>
             </div>
-            <select className="px-3 py-1.5 text-sm bg-background border border-input rounded-lg">
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 3 months</option>
-            </select>
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={revenueData}>
@@ -287,10 +278,11 @@ export function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="name" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
-              <Tooltip />
+              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
               <Area
                 type="monotone"
                 dataKey="revenue"
+                name="Revenue"
                 stroke="#10b981"
                 strokeWidth={2}
                 fillOpacity={1}
@@ -299,6 +291,7 @@ export function Dashboard() {
               <Area
                 type="monotone"
                 dataKey="profit"
+                name="Profit"
                 stroke="#3b82f6"
                 strokeWidth={2}
                 fillOpacity={1}
@@ -311,38 +304,48 @@ export function Dashboard() {
         {/* Category Distribution */}
         <div className="p-6 bg-card border border-border rounded-xl">
           <h2 className="text-lg font-semibold mb-6">Sales by Category</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                dataKey="value"
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+          {categoryData.length === 0 ? (
+            <div className="h-[200px] flex items-center justify-center text-muted-foreground text-sm">
+              No sales logged yet to categorize.
+            </div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `${value}%`} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-4 space-y-2 max-h-[120px] overflow-y-auto pr-1">
+                {categoryData.map((category, index) => (
+                  <div key={index} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: category.color }}
+                      ></div>
+                      <span>{category.name}</span>
+                    </div>
+                    <span className="font-medium">
+                      {category.value}% ({formatCurrency(category.amount)})
+                    </span>
+                  </div>
                 ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="mt-4 space-y-2">
-            {categoryData.map((category, index) => (
-              <div key={index} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  ></div>
-                  <span>{category.name}</span>
-                </div>
-                <span className="font-medium">{category.value}%</span>
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -350,71 +353,93 @@ export function Dashboard() {
         {/* Top Products */}
         <div className="p-6 bg-card border border-border rounded-xl">
           <h2 className="text-lg font-semibold mb-4">Top Selling Products</h2>
-          <div className="space-y-3">
-            {topProducts.map((product, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-gradient-from to-emerald-gradient-to flex items-center justify-center text-white font-bold">
-                    {index + 1}
+          {topProducts.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              No sales logged yet to determine top sellers.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {topProducts.map((product, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-gradient-from to-emerald-gradient-to flex items-center justify-center text-white font-bold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h4 className="font-medium">{product.name}</h4>
+                      <p className="text-sm text-muted-foreground">{product.sales} units sold</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-medium">{product.name}</h4>
-                    <p className="text-sm text-muted-foreground">{product.sales} units sold</p>
+                  <div className="text-right">
+                    <p className="font-semibold">{product.revenue}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Profit: {product.profit}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold">{product.revenue}</p>
-                  <p
-                    className={`text-xs ${
-                      product.trend === 'up' ? 'text-success' : 'text-destructive'
-                    }`}
-                  >
-                    {product.change}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Inventory Alerts */}
         <div className="p-6 bg-card border border-border rounded-xl">
           <h2 className="text-lg font-semibold mb-4">Inventory Alerts</h2>
-          <div className="space-y-3">
-            {alerts.map((alert, index) => (
-              <div
-                key={index}
-                className={`p-3 rounded-lg border ${
-                  alert.type === 'danger'
-                    ? 'bg-destructive/5 border-destructive/20'
-                    : alert.type === 'warning'
-                    ? 'bg-warning/5 border-warning/20'
-                    : 'bg-info/5 border-info/20'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">{alert.product}</h4>
-                    <p className="text-sm text-muted-foreground">Quantity: {alert.quantity}</p>
+          {!metrics?.alerts || metrics.alerts.length === 0 ? (
+            <div className="p-8 text-center text-success text-sm flex flex-col items-center justify-center h-full">
+              <span className="text-2xl mb-1">👍</span>
+              <p className="font-semibold">All stock levels healthy!</p>
+              <p className="text-xs text-muted-foreground mt-0.5">No low stock items currently.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {metrics.alerts.map((alert, index) => (
+                <div
+                  key={index}
+                  className={`p-3 rounded-lg border ${
+                    alert.type === 'danger'
+                      ? 'bg-destructive/5 border-destructive/20'
+                      : 'bg-warning/5 border-warning/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">{alert.product}</h4>
+                      <p className="text-sm text-muted-foreground">Quantity: {alert.quantity}</p>
+                    </div>
+                    <span
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                        alert.type === 'danger'
+                          ? 'bg-destructive text-white'
+                          : 'bg-warning text-white'
+                      }`}
+                    >
+                      {alert.status}
+                    </span>
                   </div>
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      alert.type === 'danger'
-                        ? 'bg-destructive text-white'
-                        : alert.type === 'warning'
-                        ? 'bg-warning text-white'
-                        : 'bg-info text-white'
-                    }`}
-                  >
-                    {alert.status}
-                  </span>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ML Dataset Export */}
+      <div className="p-6 bg-card border border-border rounded-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">ML Training Dataset</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Download daily sales records with weather, festival, and seasonal context for ML model training.
+            </p>
           </div>
+          <Button onClick={handleDownloadDataset} disabled={downloadingDataset}>
+            <FileDown className="mr-2 h-4 w-4" />
+            {downloadingDataset ? "Generating..." : "Download CSV"}
+          </Button>
         </div>
       </div>
 

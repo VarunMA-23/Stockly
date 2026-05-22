@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Receipt, RefreshCw } from "lucide-react"
 import { getSales } from "../services/sales"
 import type { Customer, Sale, User } from "../types"
+import { formatCurrency } from "../utils/formatters"
 import { Button } from "../components/ui/button"
 import {
   Breadcrumb,
@@ -130,7 +131,7 @@ export function Sales({ onNavigate }: SalesProps) {
                   <TableCell>{getCustomerName(sale.customer)}</TableCell>
                   <TableCell>{getCashierName(sale.cashier)}</TableCell>
                   <TableCell className="uppercase">{sale.paymentMethod}</TableCell>
-                  <TableCell>${sale.total.toFixed(2)}</TableCell>
+                  <TableCell>{formatCurrency(sale.total)}</TableCell>
                   <TableCell>
                     <Button
                       variant="outline"

@@ -11,6 +11,9 @@ import { Settings } from './pages/Settings';
 import { Categories } from './pages/Categories';
 import { ProductForm } from './pages/ProductForm';
 import { Customers } from './pages/Customers';
+import { Suppliers } from './pages/Suppliers';
+import { PurchaseOrders } from './pages/PurchaseOrders';
+import { WarehouseManagement } from './pages/Warehouse';
 import { Sales } from './pages/Sales';
 import { SaleDetail } from './pages/SaleDetail';
 import { ComingSoon } from './pages/ComingSoon';
@@ -98,11 +101,11 @@ export default function App() {
       case '/customers':
         return <Customers />;
       case '/suppliers':
-        return <ComingSoon title="Supplier Management" description="Track supplier performance, manage relationships, and optimize procurement." icon={Truck} />;
+        return <Suppliers />;
       case '/purchase-orders':
-        return <ComingSoon title="Purchase Orders" description="Create, track, and manage purchase orders with intelligent automation." icon={FileText} />;
+        return <PurchaseOrders />;
       case '/warehouse':
-        return <ComingSoon title="Warehouse Management" description="Optimize warehouse operations with real-time tracking and analytics." icon={Warehouse} />;
+        return <WarehouseManagement />;
       case '/analytics':
         return <ComingSoon title="Advanced Analytics" description="Comprehensive business intelligence and custom reporting dashboard." icon={TrendingUp} />;
       case '/ai-forecasting':

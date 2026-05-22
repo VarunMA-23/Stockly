@@ -83,11 +83,20 @@ The system is built with a **mobile-first, responsive UI**, supports **multi-sto
 
 ### Analytics & Dashboard
 - Real-time KPI cards: daily/weekly/monthly revenue, profit margin, total products, low stock count
-- Revenue trend chart (7-day)
+- Revenue trend chart (7-day) with ₹ Indian Rupee formatting
 - Category-wise sales distribution (pie chart)
 - Best-selling products ranking
 - Peak shopping hours analysis
 - All computed via MongoDB aggregation pipelines
+
+### ML Dataset Generation
+- Every sale automatically recorded into a **DailyRecord** with rich context:
+  - Date, day name, weekend flag, season detection, Indian festival detection
+  - Real-time weather data via **WeatherAPI.com** (condition, temperature, humidity, wind speed)
+  - Per-product quantity & revenue breakdown, payment method split
+- **One-click CSV export** from the Dashboard — generated on-demand, never stored on disk
+- CSV structure designed for ML model training (tabular format with feature columns)
+- Festival calendar includes 25+ Indian festivals (Diwali, Holi, Dussehra, Pongal, Christmas, etc.)
 
 ### AI Forecasting (UI Ready)
 - Sales forecast chart with confidence intervals
@@ -161,6 +170,8 @@ The system is built with a **mobile-first, responsive UI**, supports **multi-sto
 | **JWT + bcryptjs** | Authentication |
 | **httpOnly Cookies** | Refresh token storage |
 | **Nodemon** | Development hot reload |
+| **WeatherAPI.com** | Real-time & historical weather data per sale |
+| **Native fetch (Node 24)** | HTTP client for weather API calls |
 
 ### Frontend
 | Technology | Purpose |
@@ -309,6 +320,7 @@ The backend exposes a full REST API at `/api/`. All protected routes require a v
 | `/api/purchase-orders` | GET, POST, PUT | Admin/Manager | Full PO workflow + auto-refill recommendations |
 | `/api/inventory` | GET, POST | Admin/Manager/Warehouse | Stock logs, low stock alerts, manual adjustments |
 | `/api/analytics` | GET | Admin/Manager/Analyst | Dashboard KPIs, revenue chart, category sales, peak hours |
+| `/api/analytics/export-dataset` | GET | Admin/Manager | Download ML training dataset as CSV (daily records with weather, festival, season context) |
 
 ---
 
@@ -345,7 +357,15 @@ JWT_SECRET=your_jwt_secret_here
 JWT_REFRESH_SECRET=your_refresh_secret_here
 NODE_ENV=development
 CLIENT_URL=http://localhost:5173
+
+# WeatherAPI.com (free tier: 1M calls/month)
+# Sign up at https://www.weatherapi.com to get your API key
+WEATHER_API_KEY=your_weatherapi_key_here
+WEATHER_CITY=Marathahalli,Bengaluru
+WEATHER_COUNTRY_CODE=IN
 ```
+
+> **Note:** Without a WeatherAPI key, the system uses placeholder weather data (30°C, "Unknown" condition) so the ML dataset pipeline still works without any external API. Set your key later when ready.
 
 ### 3. Run
 
@@ -398,6 +418,7 @@ This creates:
 - [ ] Pagination optimization for 100k+ product catalogs
 
 ### Phase 3 — Intelligence
+- [x] ML training dataset CSV export (daily records with weather, festival, seasonal context)
 - [ ] Real ML sales prediction service
 - [ ] Automated purchase order generation based on demand forecast
 - [ ] Anomaly detection (unusual sales patterns, theft detection)
@@ -405,7 +426,8 @@ This creates:
 
 ### Phase 4 — Enterprise
 - [ ] OAuth (Google/Microsoft sign-in)
-- [ ] CSV/Excel import/export
+- [x] ML dataset CSV export
+- [ ] CSV/Excel bulk import/export
 - [ ] ETL pipeline + data warehouse
 - [ ] Thermal printer support
 - [ ] GST-specific invoice formatting

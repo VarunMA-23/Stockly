@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Download, RefreshCw } from "lucide-react"
 import { downloadSalePdf, getSaleById } from "../services/sales"
 import type { Customer, Product, Sale, User } from "../types"
+import { formatCurrency } from "../utils/formatters"
 import { Button } from "../components/ui/button"
 import {
   Breadcrumb,
@@ -181,8 +182,8 @@ export function SaleDetail({ saleId, onNavigate }: SaleDetailProps) {
               <TableRow key={`${sale._id}-${index}`}>
                 <TableCell>{getProductName(item.product, item.name)}</TableCell>
                 <TableCell>{item.quantity}</TableCell>
-                <TableCell>${item.unitPrice.toFixed(2)}</TableCell>
-                <TableCell>${item.totalPrice.toFixed(2)}</TableCell>
+                <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
+                <TableCell>{formatCurrency(item.totalPrice)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -193,27 +194,27 @@ export function SaleDetail({ saleId, onNavigate }: SaleDetailProps) {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>${sale.subtotal.toFixed(2)}</span>
+            <span>{formatCurrency(sale.subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Discount</span>
-            <span>-${sale.discountAmount.toFixed(2)}</span>
+            <span>-{formatCurrency(sale.discountAmount)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Tax</span>
-            <span>${sale.taxAmount.toFixed(2)}</span>
+            <span>{formatCurrency(sale.taxAmount)}</span>
           </div>
           <div className="flex justify-between font-semibold">
             <span>Total</span>
-            <span>${sale.total.toFixed(2)}</span>
+            <span>{formatCurrency(sale.total)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Tendered</span>
-            <span>${sale.amountTendered.toFixed(2)}</span>
+            <span>{formatCurrency(sale.amountTendered)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Change</span>
-            <span>${sale.changeAmount.toFixed(2)}</span>
+            <span>{formatCurrency(sale.changeAmount)}</span>
           </div>
         </div>
       </div>

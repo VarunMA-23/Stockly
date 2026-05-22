@@ -96,3 +96,62 @@ export interface PaginatedResponse<T> {
   pages: number
   total: number
 }
+
+export interface Supplier {
+  _id: string
+  name: string
+  contactPerson?: string
+  mobile: string
+  email?: string
+  address?: string
+  gstin?: string
+  performance: {
+    avgDeliveryDays: number
+    qualityRating: number
+    reliabilityScore: number
+    onTimeDeliveryRate: number
+  }
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface POItem {
+  _id?: string
+  product: string | Product
+  name: string
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+  receivedQuantity: number
+}
+
+export interface PurchaseOrder {
+  _id: string
+  poNumber: string
+  supplier: string | Supplier
+  items: POItem[]
+  status: "draft" | "pending_approval" | "approved" | "ordered" | "received" | "cancelled"
+  subtotal: number
+  taxAmount: number
+  total: number
+  expectedDeliveryDate?: string
+  receivedDate?: string
+  notes?: string
+  createdBy: string | User
+  approvedBy?: string | User
+  createdAt: string
+  updatedAt: string
+}
+
+export interface InventoryLog {
+  _id: string
+  product: Product
+  type: "purchase" | "sale" | "transfer" | "adjustment" | "expiry" | "return"
+  quantity: number
+  reference?: string
+  notes?: string
+  performedBy: User
+  createdAt: string
+  updatedAt: string
+}

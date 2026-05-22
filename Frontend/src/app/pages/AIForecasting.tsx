@@ -62,7 +62,7 @@ const insights = [
   {
     icon: '📈',
     title: 'Revenue Forecast',
-    description: 'Expected to reach $48,500 this week',
+    description: 'Expected to reach ₹48,500 this week',
     confidence: 94,
     impact: 'high',
   },

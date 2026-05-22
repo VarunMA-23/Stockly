@@ -16,15 +16,15 @@ export const generateInvoicePdf = (sale) => {
     "Items",
     ...sale.items.map(
       (item) =>
-        `${item.name} x${item.quantity} @ ${item.unitPrice.toFixed(2)} = ${item.totalPrice.toFixed(2)}`
+        `${item.name} x${item.quantity} @ ₹${item.unitPrice.toFixed(2)} = ₹${item.totalPrice.toFixed(2)}`
     ),
     "",
-    `Subtotal: ${sale.subtotal.toFixed(2)}`,
-    `Discount: ${sale.discountAmount.toFixed(2)}`,
-    `Tax: ${sale.taxAmount.toFixed(2)}`,
-    `Total: ${sale.total.toFixed(2)}`,
-    `Tendered: ${sale.amountTendered.toFixed(2)}`,
-    `Change: ${sale.changeAmount.toFixed(2)}`,
+    `Subtotal: ₹${sale.subtotal.toFixed(2)}`,
+    `Discount: ₹${sale.discountAmount.toFixed(2)}`,
+    `Tax: ₹${sale.taxAmount.toFixed(2)}`,
+    `Total: ₹${sale.total.toFixed(2)}`,
+    `Tendered: ₹${sale.amountTendered.toFixed(2)}`,
+    `Change: ₹${sale.changeAmount.toFixed(2)}`,
   ]
 
   const contentStream = [

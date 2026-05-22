@@ -13,6 +13,7 @@ import { getCategories } from "../services/categories"
 import { getCustomers } from "../services/customers"
 import { getProducts } from "../services/products"
 import { createSale } from "../services/sales"
+import { formatCurrency } from "../utils/formatters"
 import type { Category, Customer, Product } from "../types"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
@@ -23,6 +24,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog"
+
 
 type POSProps = {
   onNavigate: (path: string) => void
@@ -61,6 +71,33 @@ export function POS({ onNavigate }: POSProps) {
   const [error, setError] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
+  const [scanValue, setScanValue] = useState("")
+
+  const handleSimulatedScan = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return
+
+    const matchedProduct = products.find(
+      (p) =>
+        (p.barcode && p.barcode.toLowerCase() === trimmed.toLowerCase()) ||
+        p.sku.toLowerCase() === trimmed.toLowerCase()
+    )
+
+    if (matchedProduct) {
+      if (matchedProduct.quantity <= 0) {
+        alert(`${matchedProduct.name} is out of stock`)
+        return
+      }
+      addToCart(matchedProduct)
+      setScanDialogOpen(false)
+      setScanValue("")
+      setSearch("") // Reset search on successful add
+    } else {
+      alert(`No product found matching barcode/SKU: "${trimmed}"`)
+    }
+  }
+
 
   useEffect(() => {
     const loadData = async () => {
@@ -225,12 +262,23 @@ export function POS({ onNavigate }: POSProps) {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault()
+                  handleSimulatedScan(search)
+                }
+              }}
               placeholder="Search or scan barcode..."
               className="pl-10 pr-12"
             />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-2 hover:bg-accent">
+            <button
+              onClick={() => setScanDialogOpen(true)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-2 hover:bg-accent"
+              type="button"
+            >
               <Barcode className="h-4 w-4" />
             </button>
+
           </div>
           <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
             <SelectTrigger>
@@ -265,7 +313,7 @@ export function POS({ onNavigate }: POSProps) {
               <h4 className="mb-1 font-medium">{product.name}</h4>
               <p className="text-sm text-muted-foreground">{product.sku}</p>
               <p className="mt-3 text-lg font-bold text-primary">
-                ${product.sellingPrice.toFixed(2)}
+                {formatCurrency(product.sellingPrice)}
               </p>
             </button>
           ))}
@@ -301,7 +349,7 @@ export function POS({ onNavigate }: POSProps) {
                 <div className="flex-1">
                   <h4 className="text-sm font-medium">{item.product.name}</h4>
                   <p className="text-xs text-muted-foreground">
-                    ${item.product.sellingPrice.toFixed(2)} each
+                    {formatCurrency(item.product.sellingPrice)} each
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -344,19 +392,19 @@ export function POS({ onNavigate }: POSProps) {
         <div className="mb-4 space-y-2 border-b border-border pb-4 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
+            <span>{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Tax (10%)</span>
-            <span>${tax.toFixed(2)}</span>
+            <span>{formatCurrency(tax)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Discount</span>
-            <span>-${discountAmount.toFixed(2)}</span>
+            <span>-{formatCurrency(discountAmount)}</span>
           </div>
           <div className="flex justify-between text-lg font-bold">
             <span>Total</span>
-            <span className="text-primary">${total.toFixed(2)}</span>
+            <span className="text-primary">{formatCurrency(total)}</span>
           </div>
         </div>
 
@@ -403,6 +451,74 @@ export function POS({ onNavigate }: POSProps) {
           {submitting ? "Completing Payment..." : "Complete Payment"}
         </Button>
       </div>
+
+      {/* Simulated Scanner Dialog */}
+      <Dialog open={scanDialogOpen} onOpenChange={setScanDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Simulated Barcode Scanner</DialogTitle>
+            <DialogDescription>
+              Type or select a product's barcode/SKU to simulate scanning with a hardware reader.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-muted-foreground">Barcode / SKU Value</label>
+              <div className="flex gap-2">
+                <Input
+                  value={scanValue}
+                  onChange={(e) => setScanValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handleSimulatedScan(scanValue)
+                    }
+                  }}
+                  placeholder="Enter barcode or SKU..."
+                />
+                <Button onClick={() => handleSimulatedScan(scanValue)}>Scan</Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-muted-foreground block">
+                Active Catalog Barcodes (Click to Scan)
+              </label>
+              <div className="max-h-[200px] overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                {products.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-muted-foreground">No products available</div>
+                ) : (
+                  products.map((p) => (
+                    <button
+                      key={p._id}
+                      onClick={() => handleSimulatedScan(p.barcode || p.sku)}
+                      className="w-full text-left p-2.5 text-xs hover:bg-accent flex justify-between items-center transition-colors"
+                      type="button"
+                    >
+                      <div>
+                        <div className="font-semibold text-foreground">{p.name}</div>
+                        <div className="text-muted-foreground font-mono mt-0.5">SKU: {p.sku}</div>
+                      </div>
+                      {p.barcode ? (
+                        <span className="font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                          {p.barcode}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground italic">Use SKU</span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScanDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+

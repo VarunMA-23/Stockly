@@ -39,15 +39,11 @@ import {
   TableRow,
 } from "../components/ui/table"
 
+import { formatCurrency } from "../utils/formatters"
+
 type InventoryProps = {
   onNavigate: (path: string) => void
 }
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value)
 
 const formatDate = (value?: string) => {
   if (!value) return "-"

@@ -17,7 +17,7 @@ const getProducts = asyncHandler(async (req, res) => {
 
   if (req.query.search) {
     const regex = new RegExp(req.query.search, "i")
-    filter.$or = [{ name: regex }, { sku: regex }]
+    filter.$or = [{ name: regex }, { sku: regex }, { barcode: regex }]
   }
   if (req.query.category) filter.category = req.query.category
   if (req.query.isActive !== undefined) filter.isActive = req.query.isActive === "true"

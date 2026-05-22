@@ -206,7 +206,7 @@ export function Signup({ onNavigate }: SignupProps) {
               <div className="text-sm text-white/80">Time Saved</div>
             </div>
             <div className="p-4 rounded-xl bg-white/10 backdrop-blur-sm">
-              <div className="text-3xl font-bold mb-1">$2M+</div>
+              <div className="text-3xl font-bold mb-1">₹15Cr+</div>
               <div className="text-sm text-white/80">Revenue Tracked</div>
             </div>
             <div className="p-4 rounded-xl bg-white/10 backdrop-blur-sm">

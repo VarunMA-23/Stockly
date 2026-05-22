@@ -1,6 +1,8 @@
 import Sale from "../models/saleModel.js"
 import Product from "../models/productModel.js"
 import Customer from "../models/customerModel.js"
+import InventoryLog from "../models/inventoryLogModel.js"
+import { updateDailyRecord } from "./dailyRecordService.js"
 
 const roundCurrency = (value) => Math.round(value * 100) / 100
 
@@ -118,6 +120,15 @@ export const buildSaleFromRequest = async ({
   for (const item of normalizedItems) {
     item.product.quantity -= item.quantity
     await item.product.save()
+
+    await InventoryLog.create({
+      product: item.product._id,
+      type: "sale",
+      quantity: -item.quantity,
+      reference: sale.invoiceNo,
+      notes: `POS checkout - Invoice #${sale.invoiceNo}`,
+      performedBy: cashierId,
+    })
   }
 
   if (customerId) {
@@ -128,6 +139,12 @@ export const buildSaleFromRequest = async ({
       customer.loyaltyPoints += Math.floor(total / 10)
       await customer.save()
     }
+  }
+
+  try {
+    await updateDailyRecord(sale)
+  } catch {
+    console.warn(`Failed to update daily record for sale ${sale.invoiceNo}`)
   }
 
   return sale

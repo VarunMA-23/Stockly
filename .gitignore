@@ -1,5 +1,6 @@
 plans
 Specs
+graphify-out/
 backend.err
 backend.log
 .opencode
@@ -7,6 +8,7 @@ node_modules/
 dist/
 *.log
 .env
+.env.local
 .DS_Store
 Frontend/dist/
 Frontend/node_modules/

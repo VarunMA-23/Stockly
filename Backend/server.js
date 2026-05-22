@@ -10,7 +10,12 @@ import categoryRoutes from "./routes/categoryRoutes.js"
 import productRoutes from "./routes/productRoutes.js"
 import customerRoutes from "./routes/customerRoutes.js"
 import saleRoutes from "./routes/saleRoutes.js"
+import supplierRoutes from "./routes/supplierRoutes.js"
+import purchaseOrderRoutes from "./routes/purchaseOrderRoutes.js"
+import inventoryRoutes from "./routes/inventoryRoutes.js"
+import analyticsRoutes from "./routes/analyticsRoutes.js"
 import { errorHandler } from "./middleware/errorMiddleware.js"
+
 
 const PORT = port ?? 8080
 
@@ -41,6 +46,10 @@ app.use("/api/categories", categoryRoutes)
 app.use("/api/products", productRoutes)
 app.use("/api/customers", customerRoutes)
 app.use("/api/sales", saleRoutes)
+app.use("/api/suppliers", supplierRoutes)
+app.use("/api/purchase-orders", purchaseOrderRoutes)
+app.use("/api/inventory", inventoryRoutes)
+app.use("/api/analytics", analyticsRoutes)
 
 app.use(errorHandler)
 

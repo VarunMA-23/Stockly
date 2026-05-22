@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
 import { format } from "date-fns"
 import { CalendarIcon, ChevronLeft, Loader2, RefreshCw, WandSparkles } from "lucide-react"
+import { BarcodeSVG } from "../components/BarcodeSVG"
+
 import { getCategories } from "../services/categories"
 import { createProduct, getProductById, updateProduct } from "../services/products"
 import type { Category, Product } from "../types"
@@ -574,6 +576,11 @@ export function ProductForm({ mode, productId, onNavigate }: ProductFormProps) {
                     <FormControl>
                       <Input placeholder="Optional barcode value" {...field} />
                     </FormControl>
+                    {(field.value || form.watch("sku")) && (
+                      <div className="mt-2 p-3 bg-secondary/10 border border-border rounded-lg flex justify-center text-foreground dark:bg-white dark:text-black">
+                        <BarcodeSVG value={field.value || form.watch("sku")} showText={true} />
+                      </div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
