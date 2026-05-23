@@ -18,4 +18,6 @@ Backend/*.log
 Backend/*.err
 Backend/venv/
 Backend/__pycache__/
-
+Backend/scripts/seedData.js
+Backend/scripts/seedDailyRecords.js
+start.bat
